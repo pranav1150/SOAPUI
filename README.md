@@ -1,4 +1,4 @@
-# SOAPUI
+# Automation Scripts (SoapUI)
 code (groovy script)
 
 #scripts to retrieve data from the api response and check for the validation
