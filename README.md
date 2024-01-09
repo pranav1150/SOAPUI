@@ -1,2 +1,151 @@
 # SOAPUI
 code (groovy script)
+
+#scripts to retrieve data from the api response and check for the validation
+
+(raw data to json )
+import groovy.json.JsonSlurper
+def response = messageExchange.response.responseContent
+assert response != ""
+def jsonslurper = new JsonSlurper().parseText(response)
+
+(for setting the random keyword/tenant/user)
+def id1 = UUID.randomUUID().toString()
+String[] keyword;
+keyword = id1.split('-');
+context.testCase.setPropertyValue("random_no",keyword[4])
+//log.info keyword[4]
+
+(for storing the value at the project level)
+import groovy.json.JsonSlurper
+def response = messageExchange.response.responseContent
+assert response != ""
+def jsonslurper = new JsonSlurper().parseText(response)
+assert jsonslurper.token.access_token != ""
+context.testCase.testSuite.project.setPropertyValue("x_auth_token", jsonslurper.token.access_token)
+
+(for comapring any two strings)
+import groovy.json.JsonSlurper
+def response = messageExchange.response.responseContent
+assert response != ""
+def jsonslurper = new JsonSlurper().parseText(response)
+assert jsonslurper.status != "" && jsonslurper.status != null
+assert jsonslurper.message != "" && jsonslurper.message != null
+def my_msg = "Invalid credentials. Please check the provided auth_values".toUpperCase()
+//log.info msg
+def response_msg = jsonslurper.message.toUpperCase()
+//log.info response_msg
+assert my_msg == response_msg
+
+(for importing the roles for the account onboarding using groovy script )
+import groovy.json.JsonSlurper
+import groovy.json.*
+def json_1 = testRunner.testCase.getTestStepByName("List all roles in a tenant").getPropertyValue("response")
+def response1 = new JsonSlurper().parseText(json_1)
+ArrayList<String> roles = new ArrayList<String>()
+if(response1.roles != [])
+{
+    for(int i = 0 ; i < response1.roles.size() ; i ++)
+    {
+        roles.add(response1.roles[i].id)
+    }
+}
+else
+{
+    testRunner.fail "No roles data is fetched."
+}
+return roles
+def requestBody_for_configure_snow_account_and_into_integrated_tools_Step = """
+{
+    "settings_type": "none",
+    "roles": ${JsonOutput.toJson(roles)},
+    "settings": {
+        "product_activation": [
+            {
+                "resource_category": "Request_Management",
+                "resource": []
+            },
+            {
+                "resource_category": "Incident_Management",
+                "resource": []
+            },
+            {
+                "resource_category": "Change_Management",
+                "resource": []
+            },
+            {
+                "resource_category": "Configuration_Management",
+                "resource": [
+                    "CMDB"
+                ]
+            }
+        ],
+        "tools_configuration": {}
+    }
+}
+"""
+//log.info requestBody_for_configure_snow_account_and_into_integrated_tools_Step
+context.testCase.testSteps["Configure snow account and add into integrated tools"].setPropertyValue("request", requestBody_for_configure_snow_account_and_into_integrated_tools_Step)
+
+(loop to search for a particular cloud account)
+if(jsonslurper.cloud_accounts != {} || [])
+{
+	for(def i = 0 ; i < jsonslurper.cloud_accounts.size() ; i ++)
+	{
+		if(jsonslurper.cloud_accounts[i].cloud_account_name == "CS_SaaS_QA_INFRA_120723-expiry")
+		{
+			context.testCase.testSuite.setPropertyValue("account_id_Azure", jsonslurper.cloud_accounts[i].cloud_account_id)
+			log.info jsonslurper.cloud_accounts[i].cloud_account_id
+			break
+		}
+	}
+}
+
+(for checking and returning the message) 
+import groovy.json.JsonSlurper
+def json_1 = testRunner.testCase.getTestStepByName("Activity_Page").getPropertyValue("response")
+def jsonslurper = new JsonSlurper().parseText(json_1)
+
+def flag = false
+if(jsonslurper.data.cloud_account_configuration != [])
+{   
+	for(def i = 0 ; i < jsonslurper.data.cloud_account_configuration.size() ; i ++)
+	{
+		if(jsonslurper.data.cloud_account_configuration[i].cloud_account_name == "AWS_547045142213_ssm_testing")
+		{		
+			flag = true
+			return "Template has been applied"
+		}
+		
+	}
+}
+else
+{
+	testRunner.fail "No data fetched for cloud accounts."
+}
+if(flag == false)
+{
+	testRunner.fail "Template could not be applied"
+}
+
+(for getting the value from the suite level and storing it in the new variable)
+import groovy.json.JsonSlurper
+def json_1 = testRunner.testCase.getTestStepByName("Activity_Page").getPropertyValue("response")
+def jsonslurper = new JsonSlurper().parseText(json_1)
+
+def flag = false
+def account_id_GCP = context.testCase.testSuite.getPropertyValue("account_id_GCP")
+if(jsonslurper.data.cloud_account_configuration != {} || [])
+{   
+		if(jsonslurper.data.cloud_account_configuration[0].cloud_account_id == account_id_GCP)
+		{		
+			flag = true
+			return "Template has been applied"
+		}
+		
+
+}
+else
+{
+	testRunner.fail "No data fetched for cloud accounts."
+}
