@@ -101,6 +101,20 @@ if(jsonslurper.cloud_accounts != {} || [])
 	}
 }
 
+def vmtemplate = jsonslurper.data.templates.find {
+	template -> template.name == "AWS_Provision_VirtualMachine_Ubuntu1"
+}
+
+def stoptemplate = jsonslurper.data.templates.find {
+	template -> template.name == "AWS_Provision_VirtualMachine_Ubuntu1"
+}
+assert vmtemplate != null
+assert stoptemplate != null
+
+context.testCase.testSuite.project.setPropertyValue("AWS_blueprint_template_name", vmtemplate.name)
+context.testCase.testSuite.project.setPropertyValue("AWS_blueprint_template_id", vmtemplate.id)
+
+
 (for checking and returning the message) 
 import groovy.json.JsonSlurper
 def json_1 = testRunner.testCase.getTestStepByName("Activity_Page").getPropertyValue("response")
@@ -143,9 +157,39 @@ if(jsonslurper.data.cloud_account_configuration != {} || [])
 			return "Template has been applied"
 		}
 		
-
-}
+  }
 else
 {
 	testRunner.fail "No data fetched for cloud accounts."
 }
+
+(storing a value from the nested JSON when 1 json is in array)
+import groovy.json.JsonSlurper
+def response = messageExchange.response.responseContent
+assert response != ""
+def jsonslurper = new JsonSlurper().parseText(response)
+
+
+def oci_compartment_name
+def oci_compartment_id
+//jsonslurper.data.service_accounts[0].metadata.compartments.find {
+//	compartments -> compartments.description == "Corestack Integration"
+//}
+
+for(def compartments in jsonslurper.data.service_accounts[0].metadata.compartments) {
+	if(compartments.description == "Corestack Integration") {
+		oci_compartment_id = compartments.compartment_id
+		oci_compartment_name = compartments.name
+		break
+	}
+}
+
+
+
+ log.info oci_compartment_name
+ log.info oci_compartment_id
+
+
+ context.testCase.testSuite.project.setPropertyValue("oci_compartment_name", oci_compartment_name)
+ context.testCase.testSuite.project.setPropertyValue("oci_compartment_id", oci_compartment_id)
+
