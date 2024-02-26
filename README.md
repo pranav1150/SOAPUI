@@ -193,6 +193,42 @@ for(def compartments in jsonslurper.data.service_accounts[0].metadata.compartmen
  context.testCase.testSuite.project.setPropertyValue("oci_compartment_name", oci_compartment_name)
  context.testCase.testSuite.project.setPropertyValue("oci_compartment_id", oci_compartment_id)
 
+ **OR**
+
+import org.apache.groovy.json.internal.LazyMap
+import groovy.json.JsonSlurper
+def response = messageExchange.response.responseContent
+assert response != ""
+def jsonslurper = new JsonSlurper().parseText(response)
+
+
+def aws_template_name
+def aws_template_id
+def templateDetails
+
+for(def templates in jsonslurper.templates) {
+	if(templates.template_name == "Provision_Instance_With_ElasticIP_AWS_Terraform") 
+	{
+		templateDetails  = templates
+		aws_template_name = templates.template_name
+		aws_template_id = templates.template_id
+		break
+	}
+}
+//log.info templateDetails
+//log.info aws_template_id
+assert templateDetails != null
+assert templateDetails != new LazyMap()
+
+//log.info templateDetails.template_id
+
+context.testCase.testSuite.project.setPropertyValue("terraform_template_id_AWS", templateDetails.template_id)
+context.testCase.testSuite.project.setPropertyValue("terraform_template_name_AWS", templateDetails.template_name)
+
+
+//log.info templateDetails
+
+
 **(script to trigger an API for 25 mins and comparing the parameters/status)**
 import groovy.json.JsonSlurper
 
@@ -231,3 +267,22 @@ while( System.currentTimeMillis() - startTime <= 1500000) {
 }
 
 testRunner.fail("Template status is still not Partially_Completed / completed..")
+
+**(for printing values from the json array)**
+
+import groovy.json.JsonSlurper
+def json_1 = testRunner.testCase.getTestStepByName("List-Templates").getPropertyValue("response")
+def jsonslurper = new JsonSlurper().parseText(json_1)
+
+//log.info jsonslurper
+
+def terraformtemplate = jsonslurper.templates.find {
+	templates -> templates.template_name == "Azure_VM_Provision_Ubuntu_14_04_Latest"
+}
+
+//log.info terraformtemplate.template_name
+//log.info terraformtemplate.template_id
+
+context.testCase.testSuite.project.setPropertyValue("Azure_terraform_VM_template_name", terraformtemplate.template_name)
+context.testCase.testSuite.project.setPropertyValue("Azure_terraform_VM_template_id", terraformtemplate.template_id)
+
